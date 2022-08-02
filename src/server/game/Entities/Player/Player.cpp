@@ -13316,6 +13316,13 @@ bool Player::canFlyInZone(uint32 mapid, uint32 zone, SpellInfo const* bySpell) c
             return false;
         }
     }
+    if (v_map == 0 or v_map == 1)
+    {
+        if (!HasSpell(200001)) // 200001 = Custom Flugschein Spell
+        {
+            return false;
+        }
+    }
 
     return true;
 }
