@@ -1677,7 +1677,7 @@ public:
     void BuildPlayerTalentsInfoData(WorldPacket* data);
     void BuildPetTalentsInfoData(WorldPacket* data);
     void SendTalentsInfoData(bool pet);
-    void LearnTalent(uint32 talentId, uint32 talentRank);
+    void LearnTalent(uint32 talentId, uint32 talentRank, bool command = false);
     void LearnPetTalent(ObjectGuid petGuid, uint32 talentId, uint32 talentRank);
 
     bool addTalent(uint32 spellId, uint8 addSpecMask, uint8 oldTalentRank);
@@ -1905,7 +1905,7 @@ public:
     void UpdateRating(CombatRating cr);
     void UpdateAllRatings();
 
-    void CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bool addTotalPct, float& minDamage, float& maxDamage) override;
+    void CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bool addTotalPct, float& minDamage, float& maxDamage, uint8 damageIndex) override;
 
     void UpdateDefenseBonusesMod();
     inline void RecalculateRating(CombatRating cr) { ApplyRatingMod(cr, 0, true);}
@@ -2147,6 +2147,8 @@ public:
 
     void ResetAllPowers();
 
+    SpellSchoolMask GetMeleeDamageSchoolMask(WeaponAttackType attackType = BASE_ATTACK, uint8 damageIndex = 0) const override;
+
     void _ApplyWeaponDependentAuraMods(Item* item, WeaponAttackType attackType, bool apply);
     void _ApplyWeaponDependentAuraCritMod(Item* item, WeaponAttackType attackType, AuraEffect const* aura, bool apply);
     void _ApplyWeaponDependentAuraDamageMod(Item* item, WeaponAttackType attackType, AuraEffect const* aura, bool apply);
@@ -2256,9 +2258,21 @@ public:
     /***               FLOOD FILTER SYSTEM                 ***/
     /*********************************************************/
 
-    void UpdateSpeakTime(uint32 specialMessageLimit = 0);
+    struct ChatFloodThrottle
+    {
+        enum Index
+        {
+            REGULAR = 0,
+            ADDON = 1,
+            MAX
+        };
+
+        time_t Time = 0;
+        uint32 Count = 0;
+    };
+
+    void UpdateSpeakTime(ChatFloodThrottle::Index index);
     [[nodiscard]] bool CanSpeak() const;
-    void ChangeSpeakTime(int utime);
 
     /*********************************************************/
     /***                 VARIOUS SYSTEMS                   ***/
@@ -2305,6 +2319,7 @@ public:
     float m_homebindX;
     float m_homebindY;
     float m_homebindZ;
+    float m_homebindO;
 
     [[nodiscard]] WorldLocation GetStartPosition() const;
 
@@ -2558,6 +2573,8 @@ public:
     [[nodiscard]] PlayerSetting GetPlayerSetting(std::string source, uint8 index);
     void UpdatePlayerSetting(std::string source, uint8 index, uint32 value);
 
+    std::string GetDebugInfo() const override;
+
  protected:
     // Gamemaster whisper whitelist
     WhisperListContainer WhisperList;
@@ -2693,8 +2710,7 @@ public:
     uint16 m_additionalSaveTimer; // pussywizard
     uint8 m_additionalSaveMask; // pussywizard
     uint16 m_hostileReferenceCheckTimer; // pussywizard
-    time_t m_speakTime;
-    uint32 m_speakCount;
+    std::array<ChatFloodThrottle, ChatFloodThrottle::MAX> m_chatFloodData;
     Difficulty m_dungeonDifficulty;
     Difficulty m_raidDifficulty;
     Difficulty m_raidMapDifficulty;
