@@ -1470,7 +1470,7 @@ SpellCastResult SpellInfo::CheckShapeshift(uint32 form) const
     return SPELL_CAST_OK;
 }
 
-SpellCastResult SpellInfo::CheckLocation(uint32 map_id, uint32 zone_id, uint32 area_id, Player const* player /*= nullptr*/, bool strict /*= true*/) const
+SpellCastResult SpellInfo::CheckLocation(uint32 map_id, uint32 zone_id, uint32 area_id, Player* player /*= nullptr*/, bool strict /*= true*/) const
 {
     // normal case
     if (AreaGroupId > 0)
@@ -2104,6 +2104,7 @@ AuraStateType SpellInfo::LoadAuraState() const
         case 35331: // Black Blood
         case 9806:  // Phantom Strike
         case 35325: // Glowing Blood
+        case 35328: // Lambent Blood
         case 16498: // Faerie Fire
         case 6950:
         case 20656:

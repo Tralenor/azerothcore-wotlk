@@ -57,6 +57,12 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->AttributesEx3 |= SPELL_ATTR3_ALWAYS_HIT;
     });
 
+    // Has Brewfest Mug
+    ApplySpellFix({ 42533 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->DurationEntry = sSpellDurationStore.LookupEntry(347); // 15 min
+    });
+
     // Elixir of Minor Fortitude
     ApplySpellFix({ 2378 }, [](SpellInfo* spellInfo)
     {
@@ -211,6 +217,15 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 53385 }, [](SpellInfo* spellInfo)
     {
         spellInfo->MaxAffectedTargets = 4;
+    });
+
+    ApplySpellFix({
+        20424,  // Seal of Command
+        42463,  // Seal of Vengeance
+        53739   // Seal of Corruption
+        }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx3 |= SPELL_ATTR3_IGNORE_CASTER_MODIFIERS;
     });
 
     // Spitfire Totem
@@ -583,6 +598,14 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_1].ApplyAuraName = SPELL_AURA_DUMMY; // just a marker
     });
 
+    ApplySpellFix({
+        6940, // Hand of Sacrifice
+        64205 // Divine Sacrifice
+        }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx7 |= SPELL_ATTR7_DONT_CAUSE_SPELL_PUSHBACK;
+    });
+
     // Seal of Command trigger
     ApplySpellFix({ 20424 }, [](SpellInfo* spellInfo)
     {
@@ -653,7 +676,8 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
     // Kill Command
-    ApplySpellFix({ 34027 }, [](SpellInfo* spellInfo)
+    // Kill Command, Overpower
+    ApplySpellFix({ 34027, 37529 }, [](SpellInfo* spellInfo)
     {
         spellInfo->ProcCharges = 0;
     });
@@ -713,8 +737,7 @@ void SpellMgr::LoadSpellInfoCorrections()
 
     ApplySpellFix({
         5171,   // Slice and Dice
-        6774,   // Slice and Dice
-        1725    // Distract
+        6774    // Slice and Dice
         }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx3 |= SPELL_ATTR3_SUPRESS_TARGET_PROCS;
@@ -1507,8 +1530,8 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->ChannelInterruptFlags |= AURA_INTERRUPT_FLAG_MOVE;
     });
 
-    // Debris
-    ApplySpellFix({ 36449 }, [](SpellInfo* spellInfo)
+    // Debris - Debris Visual
+    ApplySpellFix({ 36449, 30632 }, [](SpellInfo* spellInfo)
     {
         spellInfo->Attributes |= SPELL_ATTR0_AURA_IS_DEBUFF;
     });
@@ -1517,12 +1540,6 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 30531 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx3 |= SPELL_ATTR3_DOT_STACKING_RULE;
-    });
-
-    // Debris Visual
-    ApplySpellFix({ 30632 }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->Effects[EFFECT_0].TargetB = SpellImplicitTargetInfo(TARGET_DEST_DYNOBJ_ALLY);
     });
 
     // Activate Sunblade Protecto
@@ -4374,7 +4391,8 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
     // Judgement (Paladin T2 8P Bonus)
-    ApplySpellFix({ 23591 }, [](SpellInfo* spellInfo)
+    // Battlegear of Eternal Justice
+    ApplySpellFix({ 23591, 26135 }, [](SpellInfo* spellInfo)
     {
         spellInfo->ProcFlags = PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS;
     });
@@ -4460,7 +4478,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
     // Self Visual - Sleep Until Cancelled(DND)
-    ApplySpellFix({ 14915 }, [](SpellInfo* spellInfo)
+    ApplySpellFix({ 6606, 14915, 16093 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AuraInterruptFlags &= ~AURA_INTERRUPT_FLAG_NOT_SEATED;
     });
@@ -4493,6 +4511,73 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 29314 }, [](SpellInfo* spellInfo)
     {
         spellInfo->CastTimeEntry = sSpellCastTimesStore.LookupEntry(1); // 0s
+    });
+
+    // Seed of Corruption
+    ApplySpellFix({ 27285, 47833, 47834 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx |= SPELL_ATTR1_NO_REFLECTION;
+    });
+
+    // Turn the Tables
+    ApplySpellFix({ 51627, 51628, 51629 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx3 |= SPELL_ATTR3_DOT_STACKING_RULE;
+    });
+
+     // Silence
+    ApplySpellFix({ 18278 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx4 |= SPELL_ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND;
+    });
+
+    // Absorb Life
+    ApplySpellFix({ 34239 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Effects[EFFECT_0].ValueMultiplier = 1;
+    });
+
+    // Summon a Warp Rift in Void Ridge
+    ApplySpellFix({ 35036 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->CastTimeEntry = sSpellCastTimesStore.LookupEntry(1); // 0s
+    });
+
+    // Hit Rating (Dungeon T3 - 2P Bonus - Wastewalker, Doomplate)
+    ApplySpellFix({ 37608, 37610 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->DurationEntry = sSpellDurationStore.LookupEntry(0);
+        spellInfo->Effects[EFFECT_0].MiscValue = 224;
+    });
+
+    // Target Fissures
+    ApplySpellFix({ 30745 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->MaxAffectedTargets = 1;
+    });
+
+    // Acid Spit
+    ApplySpellFix({ 34290 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->MaxAffectedTargets = 1;
+    });
+
+    // Mulgore Hatchling (periodic)
+    ApplySpellFix({ 62586 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Effects[EFFECT_0].TriggerSpell = 62585; // Mulgore Hatchling (fear)
+    });
+
+    // Poultryized!
+    ApplySpellFix({ 30504 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AuraInterruptFlags |= AURA_INTERRUPT_FLAG_TAKE_DAMAGE;
+    });
+
+    // Torment of the Worgen
+    ApplySpellFix({ 30567 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->ProcChance = 3;
     });
 
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)
