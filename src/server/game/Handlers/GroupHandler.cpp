@@ -124,7 +124,7 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket& recvData)
         return;
     }
 
-    if (!player->GetSocial()->HasFriend(GetPlayer()->GetGUID()) && GetPlayer()->getLevel() < sWorld->getIntConfig(CONFIG_PARTY_LEVEL_REQ))
+    if (!player->GetSocial()->HasFriend(GetPlayer()->GetGUID()) && GetPlayer()->GetLevel() < sWorld->getIntConfig(CONFIG_PARTY_LEVEL_REQ))
     {
         SendPartyResult(PARTY_OP_INVITE, player->GetName(), ERR_INVITE_RESTRICTED);
         return;
@@ -536,6 +536,9 @@ void WorldSession::HandleLootRoll(WorldPacket& recvData)
         case ROLL_GREED:
             GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ROLL_GREED, 1);
             break;
+        case ROLL_DISENCHANT:
+            GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ROLL_DISENCHANT, 1);
+            break;
     }
 }
 
@@ -566,6 +569,12 @@ void WorldSession::HandleRandomRollOpcode(WorldPackets::Misc::RandomRollClient& 
     uint32 minimum, maximum;
     minimum = packet.Min;
     maximum = packet.Max;
+
+    /** error handling **/
+    if (minimum > maximum || maximum > 10000) // < 32768 for urand call
+    {
+        return;
+    }
 
     GetPlayer()->DoRandomRoll(minimum, maximum);
 }
@@ -778,14 +787,15 @@ void WorldSession::HandleRaidReadyCheckOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleRaidReadyCheckFinishedOpcode(WorldPacket& /*recvData*/)
 {
-    //Group* group = GetPlayer()->GetGroup();
-    //if (!group)
-    //    return;
+    Group* group = GetPlayer()->GetGroup();
+    if (!group)
+        return;
 
-    //if (!group->IsLeader(GetPlayer()->GetGUID()) && !group->IsAssistant(GetPlayer()->GetGUID()))
-    //    return;
+    if (!group->IsLeader(GetPlayer()->GetGUID()) && !group->IsAssistant(GetPlayer()->GetGUID()))
+        return;
 
-    // Is any reaction need?
+    WorldPacket data(MSG_RAID_READY_CHECK_FINISHED);
+    group->BroadcastPacket(&data, true, -1);
 }
 
 void WorldSession::BuildPartyMemberStatsChangedPacket(Player* player, WorldPacket* data)
@@ -853,7 +863,7 @@ void WorldSession::BuildPartyMemberStatsChangedPacket(Player* player, WorldPacke
         *data << uint16(player->GetMaxPower(powerType));
 
     if (mask & GROUP_UPDATE_FLAG_LEVEL)
-        *data << uint16(player->getLevel());
+        *data << uint16(player->GetLevel());
 
     if (mask & GROUP_UPDATE_FLAG_ZONE)
         *data << uint16(player->GetZoneId());
@@ -1044,7 +1054,7 @@ void WorldSession::HandleRequestPartyMemberStatsOpcode(WorldPacket& recvData)
 
     data << uint16(player->GetPower(powerType));            // GROUP_UPDATE_FLAG_CUR_POWER
     data << uint16(player->GetMaxPower(powerType));         // GROUP_UPDATE_FLAG_MAX_POWER
-    data << uint16(player->getLevel());                     // GROUP_UPDATE_FLAG_LEVEL
+    data << uint16(player->GetLevel());                     // GROUP_UPDATE_FLAG_LEVEL
     data << uint16(player->GetZoneId());                    // GROUP_UPDATE_FLAG_ZONE
     data << uint16(player->GetPositionX());                 // GROUP_UPDATE_FLAG_POSITION
     data << uint16(player->GetPositionY());                 // GROUP_UPDATE_FLAG_POSITION
