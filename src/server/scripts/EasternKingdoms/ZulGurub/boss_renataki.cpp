@@ -63,9 +63,9 @@ public:
             _dynamicFlags = me->GetDynamicFlags();
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
             events.ScheduleEvent(EVENT_VANISH, 23s, 25s);
             events.ScheduleEvent(EVENT_GOUGE, 5s, 10s);
             events.ScheduleEvent(EVENT_THOUSAND_BLADES, 15s, 20s);
@@ -85,8 +85,18 @@ public:
 
         bool CanAIAttack(Unit const* target) const override
         {
-            if (me->GetThreatMgr().GetThreatListSize() > 1 && me->GetThreatMgr().GetOnlineContainer().getMostHated()->getTarget() == target)
-                return !target->HasAura(SPELL_GOUGE);
+            if (me->GetThreatMgr().GetThreatListSize() > 1)
+            {
+                ThreatContainer::StorageType::const_iterator lastRef = me->GetThreatMgr().GetOnlineContainer().GetThreatList().end();
+                --lastRef;
+                if (Unit* lastTarget = (*lastRef)->getTarget())
+                {
+                    if (lastTarget != target)
+                    {
+                        return !target->HasAura(SPELL_GOUGE);
+                    }
+                }
+            }
 
             return true;
         }
