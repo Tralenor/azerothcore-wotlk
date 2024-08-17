@@ -16,6 +16,7 @@
  */
 
 #include "BattlegroundMgr.h"
+#include "Chat.h"
 #include "GossipDef.h"
 #include "Language.h"
 #include "ObjectMgr.h"
@@ -109,7 +110,7 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
                         canTalk = false;
                     break;
                 case GOSSIP_OPTION_STABLEPET:
-                    if (getClass() != CLASS_HUNTER)
+                    if (!IsClass(CLASS_HUNTER, CLASS_CONTEXT_PET))
                         canTalk = false;
                     break;
                 case GOSSIP_OPTION_QUESTGIVER:
@@ -262,9 +263,9 @@ void Player::OnGossipSelect(WorldObject* source, uint32 gossipListId, uint32 men
             ToggleInstantFlight();
 
             if (m_isInstantFlightOn)
-                GetSession()->SendNotification(LANG_INSTANT_FLIGHT_ON);
+                ChatHandler(GetSession()).SendNotification(LANG_INSTANT_FLIGHT_ON);
             else
-                GetSession()->SendNotification(LANG_INSTANT_FLIGHT_OFF);
+                ChatHandler(GetSession()).SendNotification(LANG_INSTANT_FLIGHT_OFF);
 
             PlayerTalkClass->SendCloseGossip();
             return;

@@ -227,7 +227,11 @@ bool MySQLConnection::Execute(PreparedStatementBase* stmt)
 
     uint32 _s = getMSTime();
 
+#if !defined(MARIADB_VERSION_ID) && (MYSQL_VERSION_ID >= 80300)
+    if (mysql_stmt_bind_named_param(msql_STMT, msql_BIND, m_mStmt->GetParameterCount(), nullptr))
+#else
     if (mysql_stmt_bind_param(msql_STMT, msql_BIND))
+#endif
     {
         uint32 lErrno = mysql_errno(m_Mysql);
         LOG_ERROR("sql.sql", "SQL(p): {}\n [ERROR]: [{}] {}", m_mStmt->getQueryString(), lErrno, mysql_stmt_error(msql_STMT));
@@ -275,7 +279,11 @@ bool MySQLConnection::_Query(PreparedStatementBase* stmt, MySQLPreparedStatement
 
     uint32 _s = getMSTime();
 
+#if !defined(MARIADB_VERSION_ID) && (MYSQL_VERSION_ID >= 80300)
+    if (mysql_stmt_bind_named_param(msql_STMT, msql_BIND, m_mStmt->GetParameterCount(), nullptr))
+#else
     if (mysql_stmt_bind_param(msql_STMT, msql_BIND))
+#endif
     {
         uint32 lErrno = mysql_errno(m_Mysql);
         LOG_ERROR("sql.sql", "SQL(p): {}\n [ERROR]: [{}] {}", m_mStmt->getQueryString(), lErrno, mysql_stmt_error(msql_STMT));
@@ -456,7 +464,7 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
     return 0;
 }
 
-size_t MySQLConnection::EscapeString(char* to, const char* from, size_t length)
+std::size_t MySQLConnection::EscapeString(char* to, const char* from, std::size_t length)
 {
     return mysql_real_escape_string(m_Mysql, to, from, length);
 }
