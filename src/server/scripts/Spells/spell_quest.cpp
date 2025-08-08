@@ -37,12 +37,11 @@ class spell_q11065_wrangle_some_aether_rays : public SpellScript
 
     SpellCastResult CheckCast()
     {
-        // if thane is present and not in combat - allow cast
         if (Unit* target = GetExplTargetUnit())
             if (target->GetHealthPct() < 40.0f)
                 return SPELL_CAST_OK;
 
-        return SPELL_FAILED_CASTER_AURASTATE;
+        return SPELL_FAILED_BAD_TARGETS;
     }
 
     void Register() override
@@ -77,6 +76,13 @@ class spell_q11065_wrangle_some_aether_rays_aura : public AuraScript
     void HandleEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         SetDuration(5000);
+
+        if (GetTarget() && GetTarget()->ToCreature())
+            if (Creature* ar = GetTarget()->ToCreature())
+            {
+                ar->AttackStop();
+                ar->SetReactState(REACT_PASSIVE);
+            }
     }
 
     void Register() override
@@ -2263,7 +2269,10 @@ class spell_q12619_emblazon_runeblade_effect : public SpellScript
 enum Quest_The_Storm_King
 {
     SPELL_RIDE_GYMER            = 43671,
-    SPELL_GRABBED               = 55424
+    SPELL_GRABBED               = 55424,
+    SPELL_HEALING_WINDS         = 55549,
+
+    NPC_STORM_CLOUD             = 29939
 };
 
 class spell_q12919_gymers_grab : public SpellScript
@@ -2278,10 +2287,14 @@ class spell_q12919_gymers_grab : public SpellScript
     void HandleScript(SpellEffIndex /*effIndex*/)
     {
         int8 seatId = 2;
-        if (!GetHitCreature())
-            return;
-        GetHitCreature()->CastCustomSpell(SPELL_RIDE_GYMER, SPELLVALUE_BASE_POINT0, seatId, GetCaster(), true);
-        GetHitCreature()->CastSpell(GetHitCreature(), SPELL_GRABBED, true);
+        if (Creature* creature = GetHitCreature())
+        {
+            creature->CastCustomSpell(SPELL_RIDE_GYMER, SPELLVALUE_BASE_POINT0, seatId, GetCaster(), true);
+            creature->CastSpell(creature, SPELL_GRABBED, true);
+
+            if (creature->GetEntry() == NPC_STORM_CLOUD)
+                creature->CastSpell(GetCaster(), SPELL_HEALING_WINDS, true);
+        }
     }
 
     void Register() override

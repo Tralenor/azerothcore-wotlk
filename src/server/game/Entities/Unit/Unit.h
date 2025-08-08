@@ -26,6 +26,7 @@
 #include "ItemTemplate.h"
 #include "MotionMaster.h"
 #include "Object.h"
+#include "SharedDefines.h"
 #include "SpellAuraDefines.h"
 #include "SpellDefines.h"
 #include "ThreatMgr.h"
@@ -558,6 +559,12 @@ enum CommandStates : uint8
     COMMAND_ABANDON = 3
 };
 
+enum class SearchMethod
+{
+    MatchAll,
+    MatchAny
+};
+
 typedef std::list<Player*> SharedVisionList;
 
 struct AttackPosition {
@@ -593,23 +600,6 @@ enum ReactiveType
     MAX_REACTIVE
 };
 
-#define SUMMON_SLOT_PET     0
-#define SUMMON_SLOT_TOTEM   1
-#define MAX_TOTEM_SLOT      5
-#define SUMMON_SLOT_MINIPET 5
-#define SUMMON_SLOT_QUEST   6
-#define MAX_SUMMON_SLOT     7
-
-#define MAX_GAMEOBJECT_SLOT 4
-
-enum PlayerTotemType
-{
-    SUMMON_TYPE_TOTEM_FIRE  = 63,
-    SUMMON_TYPE_TOTEM_EARTH = 81,
-    SUMMON_TYPE_TOTEM_WATER = 82,
-    SUMMON_TYPE_TOTEM_AIR   = 83,
-};
-
 /// Spell cooldown flags sent in SMSG_SPELL_COOLDOWN
 enum SpellCooldownFlags
 {
@@ -643,7 +633,7 @@ public:
     typedef std::multimap<AuraStateType,  AuraApplication*> AuraStateAurasMap;
     typedef std::pair<AuraStateAurasMap::const_iterator, AuraStateAurasMap::const_iterator> AuraStateAurasMapBounds;
 
-    typedef std::list<AuraEffect*> AuraEffectList;
+    typedef std::vector<AuraEffect*> AuraEffectList;
     typedef std::list<Aura*> AuraList;
     typedef std::list<AuraApplication*> AuraApplicationList;
     typedef std::list<DiminishingReturn> Diminishing;
@@ -720,6 +710,9 @@ public:
     void RemoveUnitFlag2(UnitFlags2 flags) { RemoveFlag(UNIT_FIELD_FLAGS_2, flags); }
     void ReplaceAllUnitFlags2(UnitFlags2 flags) { SetUInt32Value(UNIT_FIELD_FLAGS_2, flags); }
 
+    void SetEmoteState(Emote emoteState) { SetUInt32Value(UNIT_NPC_EMOTESTATE, emoteState); }  /// @brief Sets emote state (looping emote). Emotes available in SharedDefines.h
+    void ClearEmoteState() { SetEmoteState(EMOTE_ONESHOT_NONE); }  /// @brief Clears emote state (looping emote)
+
     // NPC flags
     NPCFlags GetNpcFlags() const { return NPCFlags(GetUInt32Value(UNIT_NPC_FLAGS)); }
     bool HasNpcFlag(NPCFlags flags) const { return HasFlag(UNIT_NPC_FLAGS, flags) != 0; }
@@ -733,7 +726,7 @@ public:
     // Movement flags
     void AddUnitMovementFlag(uint32 f) { m_movementInfo.flags |= f; }
     void RemoveUnitMovementFlag(uint32 f) { m_movementInfo.flags &= ~f; }
-    [[nodiscard]] bool HasUnitMovementFlag(uint32 f) const { return (m_movementInfo.flags & f) == f; }
+    [[nodiscard]] bool HasUnitMovementFlag(uint32 f) const { return (m_movementInfo.flags & f) != 0; }
     [[nodiscard]] uint32 GetUnitMovementFlags() const { return m_movementInfo.flags; }
     void SetUnitMovementFlags(uint32 f) { m_movementInfo.flags = f; }
 
@@ -750,7 +743,7 @@ public:
     // Unit type methods
     [[nodiscard]] bool IsSummon() const { return m_unitTypeMask & UNIT_MASK_SUMMON; }
     [[nodiscard]] bool IsGuardian() const { return m_unitTypeMask & UNIT_MASK_GUARDIAN; }
-    [[nodiscard]] bool IsControllableGuardian() const { return m_unitTypeMask & UNIT_MASK_CONTROLABLE_GUARDIAN; }
+    [[nodiscard]] bool IsControllableGuardian() const { return m_unitTypeMask & UNIT_MASK_CONTROLLABLE_GUARDIAN; }
     [[nodiscard]] bool IsPet() const { return m_unitTypeMask & UNIT_MASK_PET; }
     [[nodiscard]] bool IsHunterPet() const { return m_unitTypeMask & UNIT_MASK_HUNTER_PET; }
     [[nodiscard]] bool IsTotem() const { return m_unitTypeMask & UNIT_MASK_TOTEM; }
@@ -825,9 +818,11 @@ public:
     bool _IsValidAssistTarget(Unit const* target, SpellInfo const* bySpell) const;
 
     // Combat range
+    [[nodiscard]] float GetBoundaryRadius() const { return m_floatValues[UNIT_FIELD_BOUNDINGRADIUS]; }
     [[nodiscard]] float GetCombatReach() const override { return m_floatValues[UNIT_FIELD_COMBATREACH]; }
     [[nodiscard]] float GetMeleeReach() const { float reach = m_floatValues[UNIT_FIELD_COMBATREACH]; return reach > MIN_MELEE_REACH ? reach : MIN_MELEE_REACH; }
     [[nodiscard]] bool IsWithinRange(Unit const* obj, float dist) const;
+    bool IsWithinBoundaryRadius(const Unit* obj) const;
     bool IsWithinCombatRange(Unit const* obj, float dist2compare) const;
     bool IsWithinMeleeRange(Unit const* obj, float dist = 0.f) const;
     float GetMeleeRange(Unit const* target) const;
@@ -974,6 +969,13 @@ public:
     {
         if (FactionTemplateEntry const* entry = GetFactionTemplateEntry())
             return entry->IsContestedGuardFaction();
+
+        return false;
+    }
+    [[nodiscard]] bool RespondsToCallForHelp() const
+    {
+        if (FactionTemplateEntry const* entry = GetFactionTemplateEntry())
+            return entry->FactionRespondsToCallForHelp();
 
         return false;
     }
@@ -1178,7 +1180,7 @@ public:
     uint32 SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, uint32 pdamage, DamageEffectType damagetype, uint32 stack = 1);
 
     // AOE damages
-    int32 CalculateAOEDamageReduction(int32 damage, uint32 schoolMask, Unit* caster) const;
+    int32 CalculateAOEDamageReduction(int32 damage, uint32 schoolMask, bool npcCaster) const;
 
     // Armor reduction
     static bool IsDamageReducedByArmor(SpellSchoolMask damageSchoolMask, SpellInfo const* spellInfo = nullptr, uint8 effIndex = MAX_SPELL_EFFECTS);
@@ -1367,6 +1369,50 @@ public:
 
     [[nodiscard]] bool HasAuraEffect(uint32 spellId, uint8 effIndex, ObjectGuid caster = ObjectGuid::Empty) const;
     [[nodiscard]] uint32 GetAuraCount(uint32 spellId) const;
+
+    /**
+    * @brief Check if unit has ANY or ALL specified auras.
+    *
+    * @param sm The search method to use
+    *           - SearchMethod::MatchAll : The function checks for all of the spell id's on the unit.
+    *           - SearchMethod::MatchAny : The function checks for any of the spell id's on the unit.
+    *
+    * @param spellIds List of spell id's to check for on the unit.
+    *
+    * @return Returns true if the search method condition is met. Otherwise false.
+    */
+    bool HasAuras(SearchMethod sm, std::vector<uint32>& spellIds) const;
+
+    /**
+     * @brief Checks if the unit has ANY specified auras.
+     *
+     * @tparam Auras Can be any type convertible to uint32.
+     * @param spellIds List of spell id's to check for on the unit.
+     *
+     * @return Returns true if the unit has ANY of the specified auras. Otherwise false.
+     */
+    template <typename... Auras>
+    bool HasAnyAuras(Auras... spellIds) const
+    {
+        std::vector<uint32> spellList = { static_cast<uint32>(spellIds)... };
+        return HasAuras(SearchMethod::MatchAny, spellList);
+    }
+
+    /**
+     * @brief Checks if the unit has ALL specified auras.
+     *
+     * @tparam Auras Can be any type convertible to uint32.
+     * @param spellIds List of spell id's to check for on the unit.
+     *
+     * @return Returns true if the unit has ALL of the specified auras. Otherwise false.
+     */
+    template <typename... Auras>
+    bool HasAllAuras(Auras... spellIds) const
+    {
+        std::vector<uint32> spellList = { static_cast<uint32>(spellIds)... };
+        return HasAuras(SearchMethod::MatchAll, spellList);
+    }
+
     [[nodiscard]] bool HasAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
     [[nodiscard]] bool HasAuraType(AuraType auraType) const;
     [[nodiscard]] bool HasAuraTypeWithCaster(AuraType auratype, ObjectGuid caster) const;
@@ -1448,6 +1494,7 @@ public:
     [[nodiscard]] Player* GetSpellModOwner() const;
     [[nodiscard]] Spell* GetCurrentSpell(CurrentSpellTypes spellType) const { return m_currentSpells[spellType]; }
     [[nodiscard]] Spell* GetCurrentSpell(uint32 spellType) const { return m_currentSpells[spellType]; }
+    [[nodiscard]] Spell* GetFirstCurrentCastingSpell() const;
     [[nodiscard]] Spell* FindCurrentSpellBySpellId(uint32 spell_id) const;
     [[nodiscard]] int32 GetCurrentSpellCastTime(uint32 spell_id) const;
 
@@ -1590,6 +1637,12 @@ public:
     {
         return !HasUnitState(UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING | UNIT_STATE_IN_FLIGHT |
                              UNIT_STATE_ROOT | UNIT_STATE_STUNNED | UNIT_STATE_DISTRACTED) && !GetOwnerGUID();
+    }
+
+    [[nodiscard]] bool HasLeewayMovement() const
+    {
+         return m_movementInfo.HasMovementFlag(MOVEMENTFLAG_FORWARD | MOVEMENTFLAG_STRAFE_LEFT | MOVEMENTFLAG_STRAFE_RIGHT | MOVEMENTFLAG_FALLING)
+                && !IsWalking();
     }
 
     void KnockbackFrom(float x, float y, float speedXY, float speedZ);
@@ -1816,10 +1869,7 @@ public:
 
     // ShapeShitForm (use by druid)
     [[nodiscard]] ShapeshiftForm GetShapeshiftForm() const { return ShapeshiftForm(GetByteValue(UNIT_FIELD_BYTES_2, 3)); }
-    void SetShapeshiftForm(ShapeshiftForm form)
-    {
-        SetByteValue(UNIT_FIELD_BYTES_2, 3, form);
-    }
+    void SetShapeshiftForm(ShapeshiftForm form);
     bool IsAttackSpeedOverridenShapeShift() const;
     [[nodiscard]] bool IsInFeralForm() const
     {
@@ -1841,8 +1891,7 @@ public:
     void RestoreDisplayId();
     void SetNativeDisplayId(uint32 displayId) { SetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID, displayId); }
 
-    [[nodiscard]] uint32 GetModelForForm(ShapeshiftForm form, uint32 spellId) const;
-    uint32 GetModelForTotem(PlayerTotemType totemType);
+    [[nodiscard]] uint32 GetModelForForm(ShapeshiftForm form, uint32 spellId);
 
     // Unit positons
     [[nodiscard]] virtual bool IsInWater() const;
@@ -1854,6 +1903,7 @@ public:
     void SetInFront(WorldObject const* target);
     void SetFacingTo(float ori);
     void SetFacingToObject(WorldObject* object);
+    void SetTimedFacingToObject(WorldObject* object, uint32 time); // Reset to home orientation after given time
 
     bool isInAccessiblePlaceFor(Creature const* c) const;
     bool isInFrontInMap(Unit const* target, float distance, float arc = M_PI) const;
@@ -1993,6 +2043,8 @@ protected:
     void _DeleteRemovedAuras();
 
     void _UpdateAutoRepeatSpell();
+
+    bool CanSparringWith(Unit const* attacker) const;   ///@brief: Check if unit is eligible for sparring damages. Work only if attacker and victim are creatures.
 
     bool IsAlwaysVisibleFor(WorldObject const* seer) const override;
     bool IsAlwaysDetectableFor(WorldObject const* seer) const override;
