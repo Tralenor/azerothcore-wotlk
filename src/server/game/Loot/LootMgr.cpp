@@ -1295,25 +1295,33 @@ LootStoreItem const* LootTemplate::LootGroup::Roll(Loot& loot, Player const* pla
 
     if (!possibleLoot.empty())                             // First explicitly chanced entries are checked
     {
-        float roll = (float)rand_chance();
+        auto roll = static_cast<float>(rand_chance());
+        LootStoreItem* selectedItem = nullptr;
+        float highestChance = 0.0f;
 
-        for (LootStoreItemList::const_iterator itr = possibleLoot.begin(); itr != possibleLoot.end(); ++itr)   // check each explicitly chanced entry in the template and modify its chance based on quality.
+        for (LootStoreItemList::const_iterator itr = possibleLoot.begin(); itr != possibleLoot.end(); ++itr)
         {
             LootStoreItem* item = *itr;
             float chance = item->chance;
 
-            if (!sScriptMgr->OnItemRoll(player, item, chance, loot, store))
-                return nullptr;
-
-            if (chance >= 100.0f)
-                return item;
+            if (!sScriptMgr->OnItemRoll(player, item, chance, loot, store)){
+                continue;
+            }
 
             roll -= chance;
-            if (roll < 0)
-                return item;
+            if (roll < 0.0f)
+            {
+                // This item would be selected by roll; compare against previous selection, only keep the highest successful roll as this is in an ItemGroup
+                if (!selectedItem || chance > highestChance)
+                {
+                    selectedItem = item;
+                    highestChance = chance;
+                }
+            }
         }
-    }
 
+        return selectedItem;
+    }
     if (!sScriptMgr->OnBeforeLootEqualChanced(player, EqualChanced, loot, store))
         return nullptr;
 
