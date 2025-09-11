@@ -1329,8 +1329,9 @@ void WorldSession::HandleWrapItemOpcode(WorldPacket& recvData)
         return;
     }
 
-    uint32 special_gift_item_id_which_allows_soulbound_items_to_be_gifted = 500109;
-    if (item->IsSoulBound() && gift->GetEntry() != special_gift_item_id_which_allows_soulbound_items_to_be_gifted)
+    uint32 special_wrapper_item_id_which_allows_soulbound_items_to_be_gifted = 500109;
+    uint32 special_gift_item_id_which_allows_soulbound_items_to_be_gifted = 500110;
+    if (item->IsSoulBound() && gift->GetEntry() != special_wrapper_item_id_which_allows_soulbound_items_to_be_gifted)
     {
         _player->SendEquipError(EQUIP_ERR_BOUND_CANT_BE_WRAPPED, item, nullptr);
         return;
@@ -1386,7 +1387,13 @@ void WorldSession::HandleWrapItemOpcode(WorldPacket& recvData)
         case 21830:
             item->SetEntry(21831);
             break;
+        case 500109: // special_wrapper_item_id_which_allows_soulbound_items_to_be_gifted
+            item->SetEntry(special_gift_item_id_which_allows_soulbound_items_to_be_gifted);
+            break;
+        default:
+            item->SetEntry(5043);
     }
+
     item->SetGuidValue(ITEM_FIELD_GIFTCREATOR, _player->GetGUID());
     item->SetUInt32Value(ITEM_FIELD_FLAGS, ITEM_FIELD_FLAG_WRAPPED);
     item->SetState(ITEM_CHANGED, _player);
