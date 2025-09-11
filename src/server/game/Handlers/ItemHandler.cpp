@@ -1329,7 +1329,7 @@ void WorldSession::HandleWrapItemOpcode(WorldPacket& recvData)
         return;
     }
 
-    uint32 special_gift_item_id_which_allows_soulbound_items_to_be_gifted = 5048;
+    uint32 special_gift_item_id_which_allows_soulbound_items_to_be_gifted = 500109;
     if (item->IsSoulBound() && gift->GetEntry() != special_gift_item_id_which_allows_soulbound_items_to_be_gifted)
     {
         _player->SendEquipError(EQUIP_ERR_BOUND_CANT_BE_WRAPPED, item, nullptr);
